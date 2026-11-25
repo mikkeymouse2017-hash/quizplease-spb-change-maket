@@ -1,0 +1,42 @@
+// Native window for QuizPlease SPB. Uses WKWebView to show the local web UI.
+// No third-party frameworks, no Apple Events to Photoshop.
+
+ObjC.import('AppKit');
+ObjC.import('WebKit');
+ObjC.import('Foundation');
+
+var port = $.NSProcessInfo.processInfo.environment.objectForKey('QP_PORT').js;
+if (!port || !port.length) port = '4567';
+
+var app = $.NSApplication.sharedApplication;
+app.setActivationPolicy($.NSApplicationActivationPolicyRegular);
+
+var width = 980;
+var height = 720;
+var win = $.NSWindow.alloc.initWithContentRectStyleMaskBackingDefer(
+  $.NSMakeRect(0, 0, width, height),
+  $.NSWindowStyleMaskTitled | $.NSWindowStyleMaskClosable |
+  $.NSWindowStyleMaskMiniaturizable | $.NSWindowStyleMaskResizable,
+  $.NSBackingStoreBuffered, false);
+
+win.title = 'QuizPlease SPB';
+win.minSize = $.NSMakeSize(760, 560);
+
+var web = $.WKWebView.alloc.initWithFrame($.NSMakeRect(0, 0, width, height));
+web.autoresizingMask = 2 | 16; // NSViewWidthSizable | NSViewHeightSizable
+win.contentView.addSubview(web);
+
+var urlString = 'http://127.0.0.1:' + port + '/';
+web.loadRequest($.NSURLRequest.requestWithURL($.NSURL.URLWithString(urlString)));
+
+win.makeKeyAndOrderFront(null);
+app.activateIgnoringOtherApps(true);
+
+// When the user closes the window, quit the helper so the launcher can stop the server.
+$.NSTimer.scheduledTimerWithTimeIntervalRepeatsBlock(0.4, true, function (timer) {
+  if (!win.isVisible) {
+    app.terminate(null);
+  }
+});
+
+app.run();

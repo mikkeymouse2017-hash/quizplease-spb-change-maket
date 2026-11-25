@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QuizPlease → SPB</title>
+<style>
+  :root { --accent:#e8452c; --accent-dark:#c93620; --bg:#f5f6f8; --card:#fff; --line:#e4e6ea; --text:#23262b; --muted:#7c828c; --ok:#1d8b4b; --err:#c43624; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; background:var(--bg); color:var(--text); font-size:14px; }
+  .app { max-width:980px; margin:0 auto; padding:20px 22px 38px; }
+  header { display:flex; align-items:center; gap:13px; margin-bottom:18px; }
+  .logo { width:48px; height:48px; flex:none; border-radius:13px; background:#fff; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  .logo img { width:100%; height:100%; object-fit:contain; }
+  h1 { font-size:21px; margin:0 0 3px; letter-spacing:-.3px; }
+  header p { margin:0; color:var(--muted); font-size:13px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:17px 20px; margin-bottom:14px; box-shadow:0 2px 10px rgba(20,25,35,.035); }
+  .section-title { font-weight:700; font-size:13px; text-transform:uppercase; letter-spacing:.5px; color:#555c66; margin-bottom:13px; }
+  .folder-row { display:flex; align-items:center; gap:10px; }
+  .folder-path { flex:1; min-width:0; background:#f4f5f7; border:1px solid var(--line); border-radius:9px; padding:10px 12px; color:#3b4149; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:13px; }
+  button { border:0; border-radius:9px; padding:9px 13px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; }
+  .ghost { background:#f0f1f4; color:#3d434c; }
+  .ghost:hover { background:#e6e8ec; }
+  button:disabled { opacity:.45; cursor:default; }
+  .mode-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .mode-box { border:1px solid var(--line); border-radius:12px; padding:14px; background:#fcfcfd; }
+  .mode-box h3 { margin:0 0 2px; font-size:15px; }
+  .mode-box p { margin:0 0 11px; color:var(--muted); font-size:12px; }
+  .drop { border:2px dashed #cdd2d9; border-radius:10px; padding:16px 10px; text-align:center; transition:.15s; background:#fff; cursor:pointer; }
+  .drop.hover { border-color:var(--accent); background:#fff5f3; }
+  .drop-icon { font-size:22px; color:var(--accent); line-height:1; margin-bottom:6px; }
+  .drop strong { display:block; font-size:13px; margin-bottom:3px; }
+  .drop span { color:var(--muted); font-size:11px; }
+  input[type=file] { display:none; }
+  .file-list { margin-top:10px; display:flex; flex-direction:column; gap:6px; max-height:170px; overflow:auto; }
+  .file-item { display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:8px; padding:7px 9px; background:#fff; }
+  .file-item .badge { width:32px; height:26px; flex:none; border-radius:6px; background:#fff0ec; color:var(--accent); display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:800; }
+  .file-item.diploma .badge { background:#eef1ff; color:#4054b5; }
+  .file-item .fname { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600; font-size:12px; }
+  .file-item .fsize { color:var(--muted); font-size:11px; flex:none; }
+  .file-item .remove { background:none; color:#a0a6ae; padding:2px 5px; font-size:17px; line-height:1; }
+  .file-item .remove:hover { color:var(--err); }
+  .empty { color:var(--muted); font-size:12px; text-align:center; padding:8px 0; }
+  .mode-actions { display:flex; gap:7px; margin-top:10px; }
+  .mode-actions button { flex:1; padding:8px 6px; font-size:12px; }
+  .clear-all { margin-top:12px; }
+  .primary { width:100%; margin-top:15px; padding:13px; font-size:15px; background:var(--accent); color:#fff; }
+  .primary:hover:not(:disabled) { background:var(--accent-dark); }
+  .primary:disabled { background:#b9bec7; }
+  .progress { height:7px; border-radius:5px; background:#eceef1; overflow:hidden; margin-top:14px; display:none; }
+  .progress.show { display:block; }
+  .progress div { height:100%; width:0; background:var(--accent); transition:width .3s; }
+  .summary { margin-top:11px; font-size:13px; color:var(--muted); display:none; }
+  .summary.show { display:block; }
+  .summary.ok { color:var(--ok); font-weight:600; }
+  .job-list { margin-top:12px; display:flex; flex-direction:column; gap:6px; max-height:190px; overflow:auto; }
+  .job-row { border:1px solid var(--line); border-radius:8px; padding:8px 10px; display:flex; align-items:center; gap:9px; font-size:12px; }
+  .job-row .dot { width:9px; height:9px; border-radius:50%; background:#c3c8d0; flex:none; }
+  .job-row.running .dot { background:var(--accent); animation:pulse 1s infinite; }
+  .job-row.done .dot { background:var(--ok); }
+  .job-row.error .dot { background:var(--err); }
+  @keyframes pulse { 50% { opacity:.35; } }
+  .job-row .kind { font-size:10px; font-weight:800; color:var(--muted); flex:none; }
+  .job-row .name { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .job-row .state { color:var(--muted); font-size:11px; flex:none; }
+  .job-row.done .state { color:var(--ok); }
+  .job-row.error .state { color:var(--err); }
+  .error-box { margin-top:11px; color:var(--err); font-size:12px; display:none; white-space:pre-line; }
+  .error-box.show { display:block; }
+  footer { display:flex; justify-content:space-between; align-items:center; color:var(--muted); font-size:12px; padding:3px 4px 0; }
+  footer button { padding:7px 11px; font-size:12px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="logo"><img src="/logo.png" alt="QuizPlease"></div>
+    <div>
+      <h1>QuizPlease → SPB</h1>
+      <p>Бланки и дипломы → готовые TIFF: всё сохраняется в одну папку</p>
+    </div>
+  </header>
+
+  <div class="card">
+    <div class="section-title">1. Папка результата</div>
+    <div class="folder-row">
+      <div class="folder-path" id="folderPath">Загрузка…</div>
+      <button class="ghost" id="chooseFolder">Изменить…</button>
+      <button class="ghost" id="openFolder">Открыть</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">2. Макеты</div>
+    <div class="mode-grid">
+      <section class="mode-box">
+        <h3>Бланки</h3>
+        <p>Хештег, домен и QR-код</p>
+        <div class="drop" id="dropBlank">
+          <div class="drop-icon">⇩</div>
+          <strong>Перетащите бланки</strong>
+          <span>PSD-файлы или папку с ними</span>
+        </div>
+        <input type="file" id="fileBlank" accept=".psd" multiple>
+        <div class="file-list" id="listBlank"><div class="empty">Файлы не выбраны</div></div>
+        <div class="mode-actions">
+          <button class="ghost" id="addBlank">Добавить бланки</button>
+        </div>
+      </section>
+
+      <section class="mode-box">
+        <h3>Дипломы</h3>
+        <p>Дописать «СПБ» перед каждым #</p>
+        <div class="drop" id="dropDiploma">
+          <div class="drop-icon">⇩</div>
+          <strong>Перетащите дипломы</strong>
+          <span>PSD 1/2/3 места или папку с ними</span>
+        </div>
+        <input type="file" id="fileDiploma" accept=".psd" multiple>
+        <div class="file-list" id="listDiploma"><div class="empty">Файлы не выбраны</div></div>
+        <div class="mode-actions">
+          <button class="ghost" id="addDiploma">Добавить дипломы</button>
+        </div>
+      </section>
+    </div>
+    <button class="ghost clear-all" id="clearBtn">Очистить список</button>
+  </div>
+
+  <div class="card">
+    <div class="section-title">3. Обработка</div>
+    <button class="primary" id="run" disabled>Создать TIFF</button>
+    <div class="progress" id="progress"><div id="progressBar"></div></div>
+    <div class="summary" id="summary"></div>
+    <div class="job-list" id="jobList"></div>
+    <div class="error-box" id="errorBox"></div>
+  </div>
+
+  <footer>
+    <span>Оба режима: RGB · 300 dpi · TIFF без сжатия и слоёв</span>
+    <button class="ghost" id="restart">Перезапустить Photoshop</button>
+  </footer>
+</div>
+
+<script>
+(function () {
+  var folderPath = document.getElementById('folderPath');
+  var runBtn = document.getElementById('run');
+  var jobList = document.getElementById('jobList');
+  var progress = document.getElementById('progress');
+  var progressBar = document.getElementById('progressBar');
+  var summary = document.getElementById('summary');
+  var errorBox = document.getElementById('errorBox');
+
+  var zones = {
+    blank: { drop: 'dropBlank', input: 'fileBlank', list: 'listBlank', add: 'addBlank' },
+    diploma: { drop: 'dropDiploma', input: 'fileDiploma', list: 'listDiploma', add: 'addDiploma' }
+  };
+
+  var inputs = [];
+  var jobs = [];
+  var folder = '';
+  var pollTimer = null;
+  var running = false;
+
+  function fmtSize(n) {
+    if (n > 1024 * 1024) return (n / 1024 / 1024).toFixed(1) + ' МБ';
+    return Math.round(n / 1024) + ' КБ';
+  }
+
+  function showError(text) {
+    errorBox.textContent = text || '';
+    errorBox.classList.toggle('show', !!text);
+  }
+
+  function modeOf(item) { return item.mode === 'diploma' ? 'diploma' : 'blank'; }
+
+  function renderInputs() {
+    Object.keys(zones).forEach(function (mode) {
+      var listEl = document.getElementById(zones[mode].list);
+      var items = inputs.filter(function (x) { return modeOf(x) === mode; });
+      listEl.innerHTML = '';
+      if (!items.length) {
+        listEl.innerHTML = '<div class="empty">Файлы не выбраны</div>';
+        return;
+      }
+      items.forEach(function (item) {
+        var row = document.createElement('div');
+        row.className = 'file-item ' + mode;
+        row.innerHTML = '<div class="badge">' + (mode === 'diploma' ? 'ДПЛ' : 'БЛН') + '</div>' +
+          '<div class="fname"></div><div class="fsize">' + fmtSize(item.size) + '</div>' +
+          '<button class="remove" title="Убрать">×</button>';
+        row.querySelector('.fname').textContent = item.name;
+        row.querySelector('.fname').title = item.source || item.name;
+        row.querySelector('.remove').addEventListener('click', function () {
+          if (running) return;
+          fetch('/api/inputs/remove', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: item.id })
+          })
+            .then(function (r) { return r.json(); })
+            .then(function (d) { inputs = d.inputs || []; renderInputs(); })
+            .catch(function (e) { showError('Не удалось убрать файл: ' + e.message); });
+        });
+        listEl.appendChild(row);
+      });
+    });
+    runBtn.disabled = running || inputs.length === 0;
+  }
+
+  function renderJobs() {
+    jobList.innerHTML = '';
+    jobs.forEach(function (j) {
+      var row = document.createElement('div');
+      row.className = 'job-row ' + j.status;
+      var label = j.status === 'done' ? 'Готово' : j.status === 'error' ? 'Ошибка' :
+                  j.status === 'running' ? 'Обрабатывается…' : 'В очереди';
+      row.innerHTML = '<div class="dot"></div><div class="kind">' +
+        (modeOf(j) === 'diploma' ? 'ДПЛ' : 'БЛН') + '</div><div class="name"></div><div class="state"></div>';
+      row.querySelector('.name').textContent = j.name;
+      row.querySelector('.state').textContent = label;
+      row.title = j.status === 'error' ? (j.message || 'Ошибка') : (j.final_path || j.message || '');
+      jobList.appendChild(row);
+    });
+  }
+
+  function updateProgress() {
+    var total = jobs.length;
+    var finished = jobs.filter(function (j) { return j.status === 'done' || j.status === 'error'; }).length;
+    var done = jobs.filter(function (j) { return j.status === 'done'; }).length;
+    progress.classList.add('show');
+    progressBar.style.width = total ? (finished / total * 100) + '%' : '0%';
+    summary.classList.add('show');
+    if (finished === total && total > 0) {
+      summary.className = 'summary show ' + (done === total ? 'ok' : '');
+      summary.textContent = 'Готово: ' + done + ' из ' + total +
+        (done === total ? ' · все файлы сохранены в папку результата' : ' · проверьте ошибки ниже');
+    } else {
+      summary.className = 'summary show';
+      summary.textContent = 'Обработано ' + finished + ' из ' + total + ' · Photoshop работает в фоне';
+    }
+  }
+
+  function refreshInputs() {
+    return fetch('/api/inputs').then(function (r) { return r.json(); }).then(function (d) {
+      inputs = d.inputs || [];
+      renderInputs();
+    });
+  }
+
+  function applyChooserResult(d) {
+    if (d.error) throw new Error(d.error);
+    inputs = d.inputs || [];
+    renderInputs();
+    var msgs = [];
+    if (d.errors && d.errors.length) msgs = msgs.concat(d.errors);
+    if (!inputs.length && !d.cancelled) msgs.push('PSD-файлы не найдены');
+    showError(msgs.join('\n'));
+  }
+
+  function nativeAdd(mode) {
+    if (running) return;
+    var btn = document.getElementById(zones[mode].add);
+    var oldText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Диалог…';
+    fetch('/api/choose-inputs?mode=' + encodeURIComponent(mode), { method: 'POST' })
+      .then(function (r) { return r.json(); })
+      .then(applyChooserResult)
+      .catch(function () {
+        document.getElementById(zones[mode].input).click();
+      })
+      .then(function () {
+        btn.disabled = false;
+        btn.textContent = oldText;
+      });
+  }
+
+  function readEntries(reader) {
+    return new Promise(function (resolve) {
+      var all = [];
+      function next() {
+        reader.readEntries(function (entries) {
+          if (!entries || !entries.length) return resolve(all);
+          all = all.concat(Array.prototype.slice.call(entries));
+          next();
+        }, function () { resolve(all); });
+      }
+      next();
+    });
+  }
+
+  function fileFromEntry(entry) {
+    return new Promise(function (resolve) {
+      entry.file(function (file) { resolve(file); }, function () { resolve(null); });
+    });
+  }
+
+  function walkEntry(entry, prefix) {
+    if (entry.isFile) {
+      return fileFromEntry(entry).then(function (file) {
+        return file ? [{ file: file, name: prefix + entry.name }] : [];
+      });
+    }
+    if (entry.isDirectory) {
+      var nextPrefix = prefix + entry.name + '/';
+      return readEntries(entry.createReader()).then(function (entries) {
+        return Promise.all(entries.map(function (e) { return walkEntry(e, nextPrefix); }));
+      }).then(function (groups) {
+        return groups.reduce(function (a, b) { return a.concat(b); }, []);
+      });
+    }
+    return Promise.resolve([]);
+  }
+
+  function entriesFromDrop(dt) {
+    var items = dt.items ? Array.prototype.slice.call(dt.items) : [];
+    if (items.length && typeof items[0].webkitGetAsEntry === 'function') {
+      var entries = items.map(function (i) { return i.webkitGetAsEntry(); }).filter(Boolean);
+      if (entries.length) {
+        return Promise.all(entries.map(function (e) { return walkEntry(e, ''); }))
+          .then(function (groups) { return groups.reduce(function (a, b) { return a.concat(b); }, []); });
+      }
+    }
+    return Promise.resolve(Array.prototype.slice.call(dt.files || []).map(function (f) {
+      return { file: f, name: f.name };
+    }));
+  }
+
+  function uploadItems(items, mode) {
+    var psd = (items || []).filter(function (x) { return x && x.file && /\.psd$/i.test(x.name); });
+    if (!psd.length) {
+      showError('Нужны файлы с расширением .psd');
+      return;
+    }
+    showError('');
+    var fd = new FormData();
+    fd.append('mode', mode);
+    psd.forEach(function (x, i) {
+      fd.append('psd_' + i, x.file, x.file.name);
+      fd.append('name_' + i, x.name);
+    });
+    fetch('/api/inputs', { method: 'POST', body: fd })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.error) throw new Error(d.error);
+        inputs = d.inputs || [];
+        renderInputs();
+        if (d.errors && d.errors.length) showError(d.errors.join('\n'));
+      })
+      .catch(function (e) { showError('Ошибка добавления: ' + e.message); });
+  }
+
+  function poll() {
+    var pending = jobs.filter(function (j) { return j.status !== 'done' && j.status !== 'error'; });
+    if (!pending.length) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+      running = false;
+      renderInputs();
+      return;
+    }
+    Promise.all(pending.map(function (j) {
+      return fetch('/api/jobs/' + encodeURIComponent(j.id))
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          j.status = d.status;
+          j.message = d.message;
+          j.final_path = d.final_path;
+        })
+        .catch(function () {});
+    })).then(function () {
+      renderJobs();
+      updateProgress();
+    });
+  }
+
+  fetch('/api/config').then(function (r) { return r.json(); }).then(function (d) {
+    folder = d.folder;
+    folderPath.textContent = folder;
+    folderPath.title = folder;
+    return refreshInputs();
+  }).catch(function () { showError('Не удалось получить настройки. Перезапустите приложение.'); });
+
+  Object.keys(zones).forEach(function (mode) {
+    var z = zones[mode];
+    var drop = document.getElementById(z.drop);
+    var input = document.getElementById(z.input);
+
+    drop.addEventListener('click', function () { nativeAdd(mode); });
+    document.getElementById(z.add).addEventListener('click', function () { nativeAdd(mode); });
+    input.addEventListener('change', function () {
+      uploadItems(Array.prototype.slice.call(input.files).map(function (f) {
+        return { file: f, name: f.name };
+      }), mode);
+      input.value = '';
+    });
+
+    ['dragenter', 'dragover'].forEach(function (ev) {
+      drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('hover'); });
+    });
+    ['dragleave', 'drop'].forEach(function (ev) {
+      drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('hover'); });
+    });
+    drop.addEventListener('drop', function (e) {
+      e.preventDefault();
+      entriesFromDrop(e.dataTransfer).then(function (items) { uploadItems(items, mode); });
+    });
+  });
+
+  document.getElementById('clearBtn').addEventListener('click', function () {
+    if (running) return;
+    fetch('/api/inputs/clear', { method: 'POST' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) { inputs = d.inputs || []; renderInputs(); showError(''); })
+      .catch(function (e) { showError('Ошибка очистки: ' + e.message); });
+  });
+
+  document.getElementById('chooseFolder').addEventListener('click', function () {
+    fetch('/api/choose-folder', { method: 'POST' }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.cancel || !d.path) return;
+      folder = d.path;
+      folderPath.textContent = folder;
+      folderPath.title = folder;
+    }).catch(function (e) { showError('Ошибка выбора папки: ' + e.message); });
+  });
+
+  document.getElementById('openFolder').addEventListener('click', function () {
+    fetch('/api/open-folder', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'path=' + encodeURIComponent(folder) }).catch(function (e) { showError(e.message); });
+  });
+
+  runBtn.addEventListener('click', function () {
+    if (!inputs.length || running) return;
+    showError('');
+    runBtn.disabled = true;
+    runBtn.textContent = 'Загрузка макетов…';
+    summary.classList.remove('show');
+
+    fetch('/api/jobs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ folder: folder })
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.error) throw new Error(d.error);
+        if (d.folder) { folder = d.folder; folderPath.textContent = folder; folderPath.title = folder; }
+        if (d.errors && d.errors.length) showError(d.errors.join('\n'));
+        jobs = jobs.concat(d.jobs || []);
+        inputs = [];
+        renderInputs();
+        renderJobs();
+        runBtn.textContent = 'Создать TIFF';
+        if (jobs.length) {
+          clearInterval(pollTimer);
+          pollTimer = setInterval(poll, 1200);
+          poll();
+        } else {
+          running = false;
+          runBtn.disabled = false;
+        }
+      })
+      .catch(function (e) {
+        showError('Ошибка: ' + e.message);
+        running = false;
+        runBtn.disabled = false;
+        runBtn.textContent = 'Создать TIFF';
+      });
+  });
+
+  document.getElementById('restart').addEventListener('click', function () {
+    if (!confirm('Перезапустить Photoshop? Несохранённые документы будут закрыты.')) return;
+    fetch('/api/photoshop/restart', { method: 'POST' })
+      .then(function () { showError('Photoshop перезапущен.'); })
+      .catch(function (e) { showError('Ошибка: ' + e.message); });
+  });
+
+  renderInputs();
+  renderJobs();
+})();
+</script>
+</body>
+</html>

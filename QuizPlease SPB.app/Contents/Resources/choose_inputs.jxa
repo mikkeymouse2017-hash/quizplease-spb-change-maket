@@ -1,0 +1,29 @@
+// Native picker: select PSD files and/or whole folders in one dialog.
+// Selected POSIX paths are printed to stdout, one per line.
+
+ObjC.import('AppKit');
+ObjC.import('Foundation');
+
+var app = $.NSApplication.sharedApplication;
+app.setActivationPolicy($.NSApplicationActivationPolicyRegular);
+app.activateIgnoringOtherApps(true);
+
+var panel = $.NSOpenPanel.openPanel;
+var customTitle = $.NSProcessInfo.processInfo.environment.objectForKey('QP_PICKER_TITLE');
+panel.title = customTitle && customTitle.js && customTitle.js.length
+  ? customTitle.js
+  : 'Выберите макеты или папки с макетами';
+panel.prompt = 'Добавить';
+panel.canChooseFiles = true;
+panel.canChooseDirectories = true;
+panel.canCreateDirectories = false;
+panel.allowsMultipleSelection = true;
+
+// In JXA a zero-argument ObjC method is auto-invoked when read as a property,
+// and the NSModalResponse comes back as a string ("1" = OK, "0" = Cancel).
+if (String(panel.runModal) === '1') {
+  var urls = panel.URLs;
+  for (var i = 0; i < urls.count; i++) {
+    console.log('PATH:' + urls.objectAtIndex(i).path.js);
+  }
+}

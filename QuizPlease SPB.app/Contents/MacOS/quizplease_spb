@@ -1,0 +1,43 @@
+#!/bin/zsh
+# Finder does not pass a UTF-8 locale to .app bundles; set it explicitly
+# so Russian file names and dialogs work correctly.
+export LANG="${LANG:-en_US.UTF-8}"
+export LC_ALL="${LC_ALL:-en_US.UTF-8}"
+cd "$(dirname "$0")/../Resources" || exit 1
+
+LOG="$HOME/Library/Logs/QuizPleaseSPB-server.log"
+mkdir -p "$(dirname "$LOG")"
+
+# Pick a free local port so several copies of the app never conflict.
+PORT=$(/usr/bin/ruby -rsocket -e '
+  p = 4567
+  40.times do
+    begin
+      s = TCPServer.new("127.0.0.1", p)
+      s.close
+      puts p
+      exit
+    rescue Errno::EADDRINUSE
+      p += 1
+    end
+  end
+  puts p
+')
+export PORT
+export QP_PORT="$PORT"
+
+/usr/bin/ruby server.rb >>"$LOG" 2>&1 &
+SERVER_PID=$!
+
+cleanup() {
+  kill "$SERVER_PID" 2>/dev/null
+  wait "$SERVER_PID" 2>/dev/null
+}
+trap cleanup EXIT INT TERM
+
+for i in {1..60}; do
+  /usr/bin/curl -fsS "http://127.0.0.1:$PORT/" >/dev/null 2>&1 && break
+  sleep 0.25
+done
+
+/usr/bin/osascript -l JavaScript app_window.jxa >>"$LOG" 2>&1
